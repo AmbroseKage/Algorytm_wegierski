@@ -204,6 +204,12 @@ def algorytm_wegierski(macierz):
 
         if len(zera_niezalezne) == matrix.shape[0]:
             print("\nPełne przyporządkowanie znalezione.")
+            print("\n--- WYNIK KOŃCOWY ---")
+            print("\nZera niezależne (przypisania):", zera_niezalezne)
+            print("Wartości tych zer (przypisania):", [int(macierz[i, j]) for i, j in zera_niezalezne])
+            koszt_calkowity = sum(macierz[i, j] for i, j in zera_niezalezne)
+            print("Minimalny koszt przypisania:", koszt_calkowity)         #koszt całkowity = suma redukcji !!!!
+
             return zera_niezalezne, suma_redukcji
 
         wiersze, kolumny = pokryj_zera_min_liczba_linii(matrix, zera_niezalezne)
@@ -212,6 +218,7 @@ def algorytm_wegierski(macierz):
         print(matrix)
 
         count += 1
+
 
 
 
@@ -226,13 +233,6 @@ m = [[12, 14, 17, 9, 23, 21],
      [19, 15, 11, 20, 18, 10]]
 
 M = np.asarray(m)
-
-zera, koszt = algorytm_wegierski(M)
-print("\n--- WYNIK KOŃCOWY ---")
-print("\nZera niezależne (przypisania):", zera)
-print("Wartości tych zer (przypisania):", [int(M[i, j]) for i, j in zera])
-koszt_calkowity = sum(M[i, j] for i, j in zera)
-print("Minimalny koszt przypisania:", koszt_calkowity)
-
+algorytm_wegierski(M)
 
 print("\n--- KONIEC PRZYKŁADU ---")
