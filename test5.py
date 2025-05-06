@@ -17,10 +17,13 @@ def zwieksz_liczbe_zer(macierz, wiersze_wykreslone, kolumny_wykreslone):
     Modyfikuje macierz kosztów zgodnie z krokiem algorytmu węgierskiego,
     aby umożliwić znalezienie większej liczby zer niezależnych w kolejnej iteracji.
     """
+
     nieprzykryte = ~wiersze_wykreslone[:, np.newaxis] & ~kolumny_wykreslone[np.newaxis, :]
     przykryte_dwiema_liniami = wiersze_wykreslone[:, np.newaxis] & kolumny_wykreslone[np.newaxis, :]
+    print(f'\nWykreślone linie:\n{przykryte_dwiema_liniami}\n')
 
     min_val = np.min(macierz[nieprzykryte]) if np.any(nieprzykryte) else 0
+    print(f'Wartość wyliczona do zmodyfikowania macierzy = {min_val}')
 
     nowa_macierz = macierz.copy()
     nowa_macierz[nieprzykryte] -= min_val
@@ -57,26 +60,8 @@ def wyswietl_macierz_z_zerami(macierz, zera_niezalezne):
 
     return oznaczenia
 
-# --- Wadliwa funkcja (zakomentowana) ---
 
-    # def wyznaczanie_zer(matrix):
-    # """
-    # Wyznacza maskę zer w macierzy kosztów.
-    # """
-    # mask = np.zeros(6, int)
-    # for i in range(len(matrix)):
-    #     for j in range(len(matrix)):
-    #         if matrix[i][j] == 0:
-    #             mask[i][j] = 1
-    # flag = 0
-    # for i in range(len(matrix)):
-    #     if 1 in matrix[:, i]:
-    #         flag += 1
-    # if flag == len(matrix):
-    #     return matrix
-    # pass
 
-# --- Poprawna funkcja wyznaczania zer niezależnych ---
 def wyznaczanie_zer_niezaleznych(matrix):
     """
     Wyznacza maksymalny możliwy zbiór zer niezależnych (skojarzenie)
@@ -91,16 +76,15 @@ def wyznaczanie_zer_niezaleznych(matrix):
                                reprezentujących znalezione zera niezależne.
                                Pusta lista, jeśli nie ma zer lub nie można znaleźć.
     """
-    print("[wyznaczanie_zer_niezaleznych - POPRAWNA] Uruchomiono.")
     rows, cols = matrix.shape
     zera_niezalezne = []
-    wiersze_zajete = np.zeros(rows, dtype=bool)
+    wiersze_zajete = np.zeros(rows, dtype=bool)         #Jednowymiarowe wektory nie dwuwymiarowe maceirze
     kolumny_zajete = np.zeros(cols, dtype=bool)
 
     while True:
         best_zero_pos = None
         min_zeros_in_line = float('inf')
-        found_in_row = True
+        found_in_row = True # To jak dla mnie bez sensu tu
 
         # Szukaj w wierszach
         for r in range(rows):
@@ -130,7 +114,7 @@ def wyznaczanie_zer_niezaleznych(matrix):
                     if 0 < count < min_zeros_in_line:
                         min_zeros_in_line = count
                         best_zero_pos = candidate_pos
-                        found_in_row = False
+                        found_in_row = False   # to  nie jest używane już więc też nie ma sensu tego modyfikować
                         if count == 1: break # Najlepszy możliwy
 
         # Dodaj znalezione zero lub zakończ
@@ -147,6 +131,90 @@ def wyznaczanie_zer_niezaleznych(matrix):
     return zera_niezalezne
 
 
+def pokryj_zera_min_liczba_linii(macierz, zera_niezalezne):
+    """
+    Znajduje minimalny zestaw linii pokrywających wszystkie zera w macierzy.
+    Zwraca maski zaznaczonych wierszy i kolumn.
+
+    Używa metody bazującej na klasycznym opisie algorytmu węgierskiego:
+    1. Zaznacz wiersze bez zer niezależnych.
+    2. Iteruj: zaznacz kolumny z zerami w zaznaczonych wierszach,
+              zaznacz wiersze z zerami niezależnymi w zaznaczonych kolumnach.
+    3. Linie rysujemy przez niezaznaczone wiersze i zaznaczone kolumny.
+    """
+    n = macierz.shape[0]
+    zaznaczone_wiersze = np.ones(n, dtype=bool)
+    zaznaczone_kolumny = np.zeros(n, dtype=bool)
+
+    # Wiersze bez zer niezależnych
+    for r in range(n):
+        if any(z[0] == r for z in zera_niezalezne):
+            zaznaczone_wiersze[r] = False
+
+    zmiana = True
+    while zmiana:
+        zmiana = False
+        # Kolumny z zerami w zaznaczonych wierszach
+        for r in range(n):
+            if zaznaczone_wiersze[r]:
+                for c in range(n):
+                    if macierz[r, c] == 0 and not zaznaczone_kolumny[c]:
+                        zaznaczone_kolumny[c] = True
+                        zmiana = True
+        # Wiersze z niezależnymi zerami w zaznaczonych kolumnach
+        for c in range(n):
+            if zaznaczone_kolumny[c]:
+                for r, c2 in zera_niezalezne:
+                    if c2 == c and not zaznaczone_wiersze[r]:
+                        zaznaczone_wiersze[r] = True
+                        zmiana = True
+
+    # Linie rysujemy przez NIEzaznaczone wiersze i zaznaczone kolumny
+    linie_wiersze = ~zaznaczone_wiersze
+    linie_kolumny = zaznaczone_kolumny
+
+    return linie_wiersze, linie_kolumny
+
+
+
+
+
+def algorytm_wegierski(macierz):
+    """
+    Pełna implementacja algorytmu węgierskiego dla kwadratowej macierzy kosztów.
+    """
+    print("=== ALGORYTM WĘGIERSKI ===")
+    print("\nMacierz początkowa:\n", macierz)
+    matrix = macierz.copy()
+
+    matrix, suma_redukcji = reduceMatrix(matrix)
+    print("\nPo redukcji:\n", matrix)
+    print(F"\nSuma redukcji = {suma_redukcji}\n")
+
+    count = 1
+    while True:
+        print(f"\n== {count} ITERACJA ALGORYTMU ==\n")
+
+        zera_niezalezne = wyznaczanie_zer_niezaleznych(matrix)
+        print(f"Znaleziono {len(zera_niezalezne)} zer niezależnych.")
+        print(f"\nZnalezione zera niezależne: {zera_niezalezne}")
+        print("\nMacierz z oznaczeniami zer:")
+        oznaczenia_po_kroku2 = wyswietl_macierz_z_zerami(matrix, zera_niezalezne)
+        print(oznaczenia_po_kroku2)
+
+        if len(zera_niezalezne) == matrix.shape[0]:
+            print("\nPełne przyporządkowanie znalezione.")
+            return zera_niezalezne, suma_redukcji
+
+        wiersze, kolumny = pokryj_zera_min_liczba_linii(matrix, zera_niezalezne)
+        matrix = zwieksz_liczbe_zer(matrix, wiersze, kolumny)
+        print("\nMacierz po modyfikacji:\n")
+        print(matrix)
+
+        count += 1
+
+
+
 print("--- START PRZYKŁADU ---")
 
 # Dane wejściowe
@@ -158,21 +226,13 @@ m = [[12, 14, 17, 9, 23, 21],
      [19, 15, 11, 20, 18, 10]]
 
 M = np.asarray(m)
-print("Macierz początkowa:\n", M)
 
-biezaca_macierz, suma_redukcji = reduceMatrix(M)
-print("\n--- Po kroku 1: Redukcja ---")
-print("Zredukowana macierz:\n", biezaca_macierz)
-print("Suma redukcji:", suma_redukcji)
+zera, koszt = algorytm_wegierski(M)
+print("\n--- WYNIK KOŃCOWY ---")
+print("\nZera niezależne (przypisania):", zera)
+print("Wartości tych zer (przypisania):", [int(M[i, j]) for i, j in zera])
+koszt_calkowity = sum(M[i, j] for i, j in zera)
+print("Minimalny koszt przypisania:", koszt_calkowity)
 
-
-print("\n--- Po kroku 2: Wyznaczanie Zer Niezależnych ---")
-znalezione_zera = wyznaczanie_zer_niezaleznych(biezaca_macierz)
-print(f"\nZnalezione zera niezależne: {znalezione_zera}")
-print(f"Liczba znalezionych zer: {len(znalezione_zera)}")
-
-print("\nMacierz z oznaczeniami (po kroku 2):")
-oznaczenia_po_kroku2 = wyswietl_macierz_z_zerami(biezaca_macierz, znalezione_zera)
-print(oznaczenia_po_kroku2)
 
 print("\n--- KONIEC PRZYKŁADU ---")
